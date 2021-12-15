@@ -10,14 +10,15 @@ class _Nothing:
 
 
 class Future:
-    def __init__(self, client):
+    def __init__(self, client, msgid):
         self.client = client
+        self.msgid = msgid
         self.result = _Nothing
         self.error: Exception = None
 
     def get(self, timeout=None):
         if not self.ready():
-            self.client._fetch_future(timeout, step=0.001)
+            self.client._wait_future(timeout, target=self)
 
         if self.error is not None:
             raise RemoteException.from_msgpack(self.error)
@@ -29,7 +30,7 @@ class Future:
             return
 
         try:
-            self.client._fetch_future(timeout, step=0.001)
+            self.client._wait_future(timeout, target=self)
         except TimeoutError:
             pass
 

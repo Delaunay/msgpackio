@@ -1,6 +1,9 @@
 from enum import Enum
 import time
 import logging
+import threading
+import select
+
 
 from msgpackio.client import Client
 from msgpackio.future import Future
@@ -37,6 +40,21 @@ class RPCClient:
         self.generator = _seq()
         self._pending_results = dict()
 
+        self.sockets = [self.client.sock]
+        self.keep_promises = True
+        self.lock = threading.Lock()
+        self.promise_keeper = threading.Thread(target=self._fetch_results)
+        self.promise_keeper.daemon = True
+        self.promise_keeper.start()
+
+    def _fetch_results(self):
+        while self.keep_promises:
+            readable, _, _ = select.select(self.sockets, [], [], 0.01)
+
+            for _ in readable:
+                value = self.client.recv(0)
+                self._set_future(value)
+
     def call(self, method, *args):
         result = self.send_request(method, args).get()
         return result
@@ -46,17 +64,19 @@ class RPCClient:
 
     def send_request(self, method, args):
         msgid = next(self.generator)
-        future = Future(self)
-        self._pending_results[msgid] = future
+        future = Future(self, msgid)
+
+        with self.lock:
+            self._pending_results[msgid] = future
+
         self.client.send([REQUEST, msgid, method, args])
         return future
 
     def notify(self, method, *args):
-        future = Future(self)
         self.client.send([NOTIFY, method, args])
-        return future
 
     def close(self):
+        self.keep_promises = False
         self.client.close()
 
     def __enter__(self):
@@ -66,28 +86,27 @@ class RPCClient:
         self.close()
         return
 
-    def _fetch_future(self, timeout, step=0.01):
-        wait_time = 0
-        start = time.time()
+    def _set_future(self, value):
+        _, msgid, error, result = value
 
-        while True:
-            value = self.client.recv(timeout)
-
-            if value is None:
-                wait_time = time.time() - start
-
-                if timeout is not None and wait_time > timeout:
-                    raise TimeoutError()
-
-                continue
-
-            kind, msgid, error, result = value
-            assert kind == RESPONSE
+        with self.lock:
             future = self._pending_results.pop(msgid, None)
 
-            if future is None:
-                raise LostFuture(f"Server replied to an unknown future")
+        if future is None:
+            log.error(f"Server replied to an unknown future")
 
-            future.error = error
-            future.result = result
-            return msgid
+        future.error = error
+        future.result = result
+        return msgid
+
+    def _wait_future(self, timeout, target):
+        start = time.time()
+
+        while not target.ready():
+            time.sleep(0)
+
+            if timeout:
+                timeout -= time.time() - start
+
+                if timeout < 0:
+                    raise TimeoutError()

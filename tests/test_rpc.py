@@ -6,7 +6,7 @@ import multiprocessing as mp
 import pytest
 import msgpack
 
-from msgpackio.client import AsyncClient, Client
+from msgpackio.client import Client
 from msgpackio.rpc import RPCClient
 from msgpackio.server import RPCServer
 from msgpackio.exceptions import RemoteException
@@ -35,7 +35,7 @@ def server(**bindings):
     asyncio.run(main())
 
 
-clients = [AsyncClient, Client]
+clients = [Client]
 
 
 @pytest.mark.parametrize("cls", clients)

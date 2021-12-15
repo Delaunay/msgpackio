@@ -10,7 +10,7 @@ def run_call(cls):
     before = time.time()
 
     for x in range(Num):
-        client.call("sum", 1, 2)
+        assert client.call("sum", 1, 2) == 3
 
     after = time.time()
     diff = after - before
@@ -24,7 +24,9 @@ def run_call_async(cls):
     for x in range(Num):
         # TODO: replace with more heavy sample
         future = client.call_async("sum", 1, 2)
-        future.get()
+
+        assert future.get() == 3
+
     after = time.time()
     diff = after - before
 

@@ -6,7 +6,7 @@ import multiprocessing as mp
 import pytest
 import msgpack
 
-from msgpackio.client import AsyncClient, Client
+from msgpackio.client import Client
 
 
 log = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ def server():
     asyncio.run(main())
 
 
-clients = [AsyncClient, Client]
+clients = [Client]
 
 
 @pytest.mark.parametrize("cls", clients)
