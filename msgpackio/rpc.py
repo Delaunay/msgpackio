@@ -44,17 +44,13 @@ class RPCClient:
         return self.send_request(method, args)
 
     def send_request(self, method, args):
-        log.debug(f"Call {method} {args}")
-
         msgid = next(self.generator)
         future = Future(self)
         self._pending_results[msgid] = future
         self.client.send([REQUEST, msgid, method, args])
         return future
 
-    def notify(self, method, args):
-        log.debug(f"Notify {method} {args}")
-
+    def notify(self, method, *args):
         future = Future(self)
         self.client.send([NOTIFY, method, args])
         return future

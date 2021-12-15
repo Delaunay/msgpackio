@@ -8,8 +8,23 @@ from msgpackio.exceptions import RemoteException, NoMethod
 log = logging.getLogger(__name__)
 
 
+class Bindings:
+    def __init__(self, obj, kwargs):
+        self.obj = obj
+        self.dict = kwargs
+
+    def get(self, item, default=None):
+        if hasattr(self.obj, item):
+            return getattr(self.obj, item)
+
+        return self.dict.get(item, default)
+
+    def __setitem__(self, item, value):
+        self.dict[item] = value
+
+
 class RPCServer(asyncio.Protocol):
-    def __init__(self, **kwargs):
+    def __init__(self, bindings=None, **kwargs):
         self.unpacker = msgpack.Unpacker()
         self.packer = msgpack.Packer(default=lambda x: x.to_msgpack())
         self.count = 0
@@ -17,7 +32,7 @@ class RPCServer(asyncio.Protocol):
             REQUEST: self.on_request,
             NOTIFY: self.on_notify,
         }
-        self.bindings = kwargs
+        self.bindings = Bindings(bindings, kwargs)
 
     def add_bindings(self, name, function):
         self.bindings[name] = function
@@ -51,7 +66,7 @@ class RPCServer(asyncio.Protocol):
         return handler(*msg[1:])
 
     def on_request(self, msgid, method, params):
-        function = self.bindings.get(method)
+        function = self.bindings.get(method, None)
         result = None
         error = None
 
