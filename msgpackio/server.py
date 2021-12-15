@@ -14,6 +14,9 @@ class Bindings:
         self.dict = kwargs
 
     def get(self, item, default=None):
+        if isinstance(item, bytes):
+            item = item.decode("utf-8")
+
         if hasattr(self.obj, item):
             return getattr(self.obj, item)
 

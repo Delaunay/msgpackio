@@ -38,7 +38,8 @@ class RPCClient:
         self._pending_results = dict()
 
     def call(self, method, *args):
-        return self.send_request(method, args).get()
+        result = self.send_request(method, args).get()
+        return result
 
     def call_async(self, method, *args):
         return self.send_request(method, args)

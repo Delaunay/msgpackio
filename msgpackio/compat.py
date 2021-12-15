@@ -3,7 +3,7 @@ import multiprocessing as mp
 
 from msgpackio.server import RPCServer
 from msgpackio.rpc import RPCClient
-from msgpackio.client import AsyncClient
+from msgpackio.client import Client as SyncClient
 
 
 class Server:
@@ -35,7 +35,7 @@ class Server:
             loop = asyncio.get_running_loop()
 
             server = await loop.create_server(
-                lambda: RPCServer(self.bindings), self.port, self.host
+                lambda: RPCServer(self.bindings), self.host, self.port
             )
 
             async with server:
@@ -47,10 +47,10 @@ class Server:
 class Client:
     """Provides the same API as ``msgpackrpc.Client`` for compatibility"""
 
-    def __init__(self, address):
-        self.port = address.port
-        self.host = address.host
-        self.client = RPCClient(AsyncClient(self.host, self.port))
+    def __init__(self, host, port):
+        self.port = port
+        self.host = host
+        self.client = RPCClient(SyncClient(self.host, self.port))
 
     def __enter__(self):
         return self
@@ -66,7 +66,7 @@ class Client:
         return self.client.notify(method, *args)
 
     def call(self, method, *args):
-        return self.call(method, *args)
+        return self.client.call(method, *args)
 
     def call_async(self, method, *args):
-        return self.call_async(method, *args)
+        return self.client.call_async(method, *args)
