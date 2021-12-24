@@ -1,5 +1,6 @@
 import msgpackrpc
 from msgpackio.compat import Client
+from msgpackio.socket import SocketClient
 import time
 
 Num = 10000
@@ -51,10 +52,15 @@ def legacy():
 def new():
     return Client("localhost", 18800)
 
+def socket():
+    s = SocketClient("localhost", 18800)
+    s.connect()
+    return s
 
-backends = [new, legacy]
+
+backends = [new, legacy, socket]
 
 for b in backends:
     run_call(b)
-    run_call_async(b)
-    run_notify(b)
+    # run_call_async(b)
+    # run_notify(b)

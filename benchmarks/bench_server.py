@@ -19,5 +19,5 @@ def new():
     server.start()
 
 
-new()
-# legacy()
+# new()
+legacy()
